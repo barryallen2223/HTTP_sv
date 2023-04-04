@@ -28,6 +28,7 @@ char* htmlFn(char response_body[BUFFERHTML], char *buffer, FILE *page){
 }
 
 int main(int argc, char * argv []) {
+    setbuf(stdout, NULL);
     if (argc < 4) {
         printf("Usage: %s <HTTP PORT> %s <Log File> %s <DocumentRootFolder>\n", argv[0], argv[1], argv[2]);
         return 1;
@@ -38,6 +39,8 @@ int main(int argc, char * argv []) {
     char *docRootFolder = argv[3];
 
     FILE *fp = fopen(logFile, "w"); // open the log file for writing
+    setvbuf(fp, NULL, _IONBF, 0);
+
     if (fp == NULL) {
         printf("Error opening log file %s\n", logFile);
         return 1;
@@ -45,12 +48,31 @@ int main(int argc, char * argv []) {
 
     FILE *html_home, *case_1, *case_2, *case_3, *case_4, *error404, *txt1MB;
     // HTML Files
-    html_home = fopen("templates/index.html", "r");
-    case_1 = fopen("templates/case1.html", "r");
-    case_2 = fopen("templates/case2.html", "r");
-    case_3 = fopen("templates/case3.html", "r");
-    case_4 = fopen("templates/case4.html", "r");
-    error404 = fopen("templates/error.html", "r");
+    char path[256];
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/index.html");
+    html_home = fopen(path, "r");
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/case1.html");
+    case_1 = fopen(path, "r");
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/case2.html");
+    case_2 = fopen(path, "r");
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/case3.html");
+    case_3 = fopen(path, "r");
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/case4.html");
+    case_4 = fopen(path, "r");
+
+    strcpy(path, docRootFolder);
+    strcat(path, "/error.html");
+    error404 = fopen(path, "r");
     // TXT Files
     txt1MB = fopen("file1.txt", "r");
 
@@ -82,11 +104,13 @@ int main(int argc, char * argv []) {
     // Create a TCP socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("[-] Socket failed\n");
+        fflush(fp);
         fprintf(fp, "[-] Socket failed\n");
         exit(EXIT_FAILURE);
     }
     
     fprintf(fp, "[+] Socket created successfully!\n");
+    printf("[+] Socket created successfully!\n");
     // Set socket options
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
         perror("[-] Setsockopt failed\n");
@@ -94,6 +118,7 @@ int main(int argc, char * argv []) {
         exit(EXIT_FAILURE);
     }
     fprintf(fp, "[+] Socket configured successfully!\n");
+    printf("[+] Socket configured successfully!\n");
     
     // Bind the socket to a port
     server_address.sin_family = AF_INET;
@@ -105,35 +130,45 @@ int main(int argc, char * argv []) {
         exit(EXIT_FAILURE);
     }
     fprintf(fp, "[+] Socket binded successfully!\n");
+    printf("[+] Socket binded successfully!\n");
 
     // Listen for incoming connections
     if (listen(sockfd, 30) < 0) {
-        perror("[-] Listen failed");
+        perror("[-] Listen failed\n");
         fprintf(fp, "[-] Listen failed\n");
         exit(EXIT_FAILURE);
     }
     fprintf(fp, "[+] Socket listening for incoming connections...\n");
+    printf("[+] Socket listening for incoming connections...\n");
 
     // Loop to accept incoming connections
     while (1) {
         // Accept an incoming connection
         if ((newsockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen)) < 0) {
-            perror("[-] Accept failed");
+            perror("[-] Accept failed\n");
+            fprintf(fp, "[-] Accept failed\n");
             exit(EXIT_FAILURE);
         }
 
+        fprintf(fp, "[+] Accepted connection successfully\n");
+        printf("[+] Accepted connection successfully\n");
         // Receive the HTTP request from the client
         memset(buffer, 0, sizeof(buffer));
         if (recv(newsockfd, buffer, 1024, 0) < 0) {
-            perror("[-] recv failed");
+            perror("[-] recv failed\n");
+            fprintf(fp, "[-] recv failed\n");
             exit(EXIT_FAILURE);
         }
+        fprintf(fp, "[+] HTTP request received successfully from the client\n");
+        printf("[+] HTTP request received succesffully from the client\n");
         // Parse the request to determine which resource the client is requesting
         char *resource = strtok(buffer, " ");
         if (strcmp(resource, "GET") != 0) {
             // Method not supported
             sprintf(response_body, "HTTP/1.1 501 Not Implemented\r\n\r\n");
             send(newsockfd, response_body, strlen(response_body), 0);
+            fprintf(fp, "%s\n\n", response_body);
+            printf("%s\n\n", response_body);
         } else {
             // Get the requested URL
             resource = strtok(NULL, " ");
@@ -141,26 +176,38 @@ int main(int argc, char * argv []) {
                 // Home page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", home_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/case1") == 0) {
                 // Case 1 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_1_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/case2") == 0) {
                 // Case 2 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_2_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/case3") == 0) {
                 // Case 3 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_3_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
-            } else if (strcmp(resource, "/case5") == 0) {
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
+            } else if (strcmp(resource, "/case4") == 0) {
                 // Case 4 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_4_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/about") == 0) {
                 // About page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", about_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/file1") == 0) {
                 // File 1
                 int file_fd = open("file1.txt", O_RDONLY);
@@ -178,6 +225,8 @@ int main(int argc, char * argv []) {
                         return -1;
                     }
                 }
+                fprintf(fp, buffer_file);
+                printf(buffer_file);
             } else if (strcmp(resource, "/file2") == 0) {
                 // File 2
                 int file_fd = open("file2.txt", O_RDONLY);
@@ -195,6 +244,8 @@ int main(int argc, char * argv []) {
                         return -1;
                     }
                 }
+                fprintf(fp, buffer_file);
+                printf(buffer_file);
             } else if (strcmp(resource, "/file3") == 0) {
                 // File 3
                 int file_fd = open("file3.txt", O_RDONLY);
@@ -212,6 +263,8 @@ int main(int argc, char * argv []) {
                         return -1;
                     }
                 }
+                fprintf(fp, buffer_file);
+                printf(buffer_file);
             } else if (strcmp(resource, "/image1.png") == 0) {
                 // Image 1
                 fseek(image1, 0, SEEK_END);
@@ -223,6 +276,8 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image1);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/image2.png") == 0) {
                 // Image 2
                 fseek(image2, 0, SEEK_END);
@@ -234,6 +289,8 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image2);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/image3.png") == 0) {
                 // Image 3
                 fseek(image3, 0, SEEK_END);
@@ -245,6 +302,8 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image3);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/image4.png") == 0) {
                 // Image 4
                 fseek(image4, 0, SEEK_END);
@@ -256,6 +315,8 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image4);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/image5.png") == 0) {
                 // Image 5
                 fseek(image5, 0, SEEK_END);
@@ -267,6 +328,8 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image5);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else if (strcmp(resource, "/image6.png") == 0) {
                 // Image 6
                 fseek(image6, 0, SEEK_END);
@@ -278,10 +341,14 @@ int main(int argc, char * argv []) {
                     int bytes_read = fread(buffer, 1, 1024, image6);
                     send(newsockfd, buffer, bytes_read, 0);
                 }
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             } else {
                 // Resource not found
                 sprintf(response_body, "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n%s", error_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
+                fprintf(fp, "%s\n\n", response_body);
+                printf("%s\n\n", response_body);
             }
         }
         // Close the connection
