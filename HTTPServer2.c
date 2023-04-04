@@ -16,7 +16,7 @@ char* htmlFn(char response_body[BUFFERHTML], char *buffer, FILE *page){
     char *caseN = (char *)malloc(BUFFERHTML*2);
     //
     if (caseN == NULL) {
-        perror("malloc failed");
+        perror("[-] malloc failed");
         exit(EXIT_FAILURE);
     }
     memset(caseN, 0, BUFFERHTML*2);
@@ -27,7 +27,22 @@ char* htmlFn(char response_body[BUFFERHTML], char *buffer, FILE *page){
     return caseN;
 }
 
-int main() {
+int main(int argc, char * argv []) {
+    if (argc < 4) {
+        printf("Usage: %s <HTTP PORT> %s <Log File> %s <DocumentRootFolder>\n", argv[0], argv[1], argv[2]);
+        return 1;
+    }
+
+    int PORTn = atoi(argv[1]);
+    char *logFile = argv[2];
+    char *docRootFolder = argv[3];
+
+    FILE *fp = fopen(logFile, "w"); // open the log file for writing
+    if (fp == NULL) {
+        printf("Error opening log file %s\n", logFile);
+        return 1;
+    }
+
     FILE *html_home, *case_1, *case_2, *case_3, *case_4, *error404, *txt1MB;
     // HTML Files
     html_home = fopen("templates/index.html", "r");
@@ -66,30 +81,38 @@ int main() {
 
     // Create a TCP socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("[-] Socket failed");
+        perror("[-] Socket failed\n");
+        fprintf(fp, "[-] Socket failed\n");
         exit(EXIT_FAILURE);
     }
     
+    fprintf(fp, "[+] Socket created successfully!\n");
     // Set socket options
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("[-] Setsockopt failed");
+        perror("[-] Setsockopt failed\n");
+        fprintf(fp, "[-] Setsockopt failed\n");
         exit(EXIT_FAILURE);
     }
+    fprintf(fp, "[+] Socket configured successfully!\n");
     
     // Bind the socket to a port
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
+    server_address.sin_port = htons(PORTn);
     if (bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
-        perror("[-] Bind failed");
+        perror("[-] Bind failed\n");
+        fprintf(fp, "[-] Bind failed\n");
         exit(EXIT_FAILURE);
     }
+    fprintf(fp, "[+] Socket binded successfully!\n");
 
     // Listen for incoming connections
     if (listen(sockfd, 30) < 0) {
         perror("[-] Listen failed");
+        fprintf(fp, "[-] Listen failed\n");
         exit(EXIT_FAILURE);
     }
+    fprintf(fp, "[+] Socket listening for incoming connections...\n");
 
     // Loop to accept incoming connections
     while (1) {
@@ -264,5 +287,6 @@ int main() {
         // Close the connection
         close(newsockfd);
     }
+    fclose(fp);
     return 0;
 }
