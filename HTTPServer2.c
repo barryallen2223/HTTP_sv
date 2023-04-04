@@ -66,17 +66,16 @@ int main() {
 
     // Create a TCP socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
+        perror("[-] Socket failed");
         exit(EXIT_FAILURE);
     }
     
     // Set socket options
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt failed");
+        perror("[-] Setsockopt failed");
         exit(EXIT_FAILURE);
     }
     
-
     // Bind the socket to a port
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY;
@@ -106,7 +105,6 @@ int main() {
             perror("[-] recv failed");
             exit(EXIT_FAILURE);
         }
-
         // Parse the request to determine which resource the client is requesting
         char *resource = strtok(buffer, " ");
         if (strcmp(resource, "GET") != 0) {
@@ -132,7 +130,7 @@ int main() {
                 // Case 3 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_3_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
-            } else if (strcmp(resource, "/case4") == 0) {
+            } else if (strcmp(resource, "/case5") == 0) {
                 // Case 4 page
                 sprintf(response_body, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n%s", case_4_page);
                 send(newsockfd, response_body, strlen(response_body), 0);
